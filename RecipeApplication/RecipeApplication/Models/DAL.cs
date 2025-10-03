@@ -9,86 +9,148 @@ namespace RecipeApplication.Models
 
         public DAL(IConfiguration configuration)
         {
-            _connectionString = configuration.GetConnectionString("DBSC");
+            _connectionString = configuration.GetConnectionString("DBCS");
         }
 
-        //Method to create a new product
-        public int AddRecipe(Recipe recipe)
+        // Method to create a new recipe
+        public int InsertRecipe(Recipe recipe)
         {
-            int recipeID = 0;
-
-            using(SqlConnection con = new SqlConnection(_connectionString))
+            using (SqlConnection con = new SqlConnection(_connectionString))
             {
-                con.Open();
-
-                // Insert recipe
-                using(SqlCommand cmdRecipe = new SqlCommand("sp_InsertProduct"))
+                using(SqlCommand cmd = new SqlCommand("sp_InsertRecipe", con))
                 {
-                    cmdRecipe.CommandType = System.Data.CommandType.StoredProcedure;
-                    cmdRecipe.Parameters.AddWithValue("@RecipeName", recipe.RecipeName);
-                    cmdRecipe.Parameters.AddWithValue("@Description", recipe.Description);
-                    cmdRecipe.Parameters.AddWithValue("@Servings", recipe.Servings);
-                    cmdRecipe.Parameters.AddWithValue("@Image", recipe.Image);
-                    cmdRecipe.Parameters.AddWithValue("@Categories", recipe.Categories);
-                    cmdRecipe.Parameters.AddWithValue("@Ingredients", recipe.Ingredients);
-                    cmdRecipe.Parameters.AddWithValue("@Instructions", recipe.Instructions);
-                    cmdRecipe.Parameters.AddWithValue("@CreatedOn", recipe.CreatedOn);
-                    cmdRecipe.Parameters.AddWithValue("@FolderName", recipe.FolderName);
+                    cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@RecipeName", recipe.RecipeName);
+                    cmd.Parameters.AddWithValue("@Description", recipe.Description);
+                    cmd.Parameters.AddWithValue("@Servings", recipe.Servings);
+                    cmd.Parameters.AddWithValue("@Image", recipe.Image);
+                    cmd.Parameters.AddWithValue("@Categories", recipe.Categories);
+                    cmd.Parameters.AddWithValue("@Ingredients", recipe.Ingredients);
+                    cmd.Parameters.AddWithValue("@Instructions", recipe.Instructions);
+                    cmd.Parameters.AddWithValue("@CreatedOn", recipe.CreatedOn);
+                    cmd.Parameters.AddWithValue("@FolderName", recipe.FolderName);
 
-                    object result = cmdRecipe.ExecuteScalar();
-                    recipeID = result != null ? Convert.ToInt32(result) : 0;
+                    con.Open();
+                    object result = cmd.ExecuteScalar();
+                    return result != null ? Convert.ToInt32(result) : 0;
                 }
+            }
+        }
 
-                // Insert features
-                if (recipeID > 0 && recipe.Ingredients != null)
+        // Method to get a recipe by Id
+        public Recipe GetRecipe(int id)
+        {
+            Recipe recipe = null;
+            using (SqlConnection con = new SqlConnection(_connectionString))
+            {
+                using (SqlCommand cmd = new SqlCommand("sp_GetRecipeById", con))
                 {
-                    foreach (var ingredient in recipe.Ingredients)
+                    cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@Id", id);
+
+                    con.Open();
+                    using(SqlDataReader reader = cmd.ExecuteReader())
                     {
-                        using (SqlCommand cmdIngredient = new SqlCommand("sp_InsertIngredient"))
+                        if(reader.Read())
                         {
-                            cmdIngredient.CommandType = System.Data.CommandType.StoredProcedure;
-                            cmdIngredient.Parameters.AddWithValue("@ProductId", productID);
-                            cmdIngredient.Parameters.AddWithValue("@IngredientName", ingredient.IngredientName);
-                            cmdIngredient.Parameters.AddWithValue("@Quantity", ingredient.Quantity);
-                            cmdIngredient.Parameters.AddWithValue("Unit", ingredient.Unit);
-
-                            object result = cmdIngredient.ExecuteScalar();
-                            ingredient.Id = Convert.ToInt32(result);
-                        }
-                    }
-                }
-
-                // Insert categories
-                if (recipeID > 0 && recipe.Categories != null)
-                {
-                    foreach (var category in recipe.Categories)
-                    {
-                        int categoryID;
-
-                        using (SqlCommand cmdCategory = new SqlCommand("sp_InsertCategory"))
-                        {
-                            cmdCategory.CommandType = System.Data.CommandType.StoredProcedure;
-                            cmdCategory.Parameters.AddWithValue("@Category", category);
-
-                            object result = cmdCategory.ExecuteScalar();
-                            categoryID = result != null ? Convert.ToInt32(result) : 0;
-                        }
-
-                        // Link product and tag
-                        if (categoryID > 0)
-                        {
-                            using (SqlCommand cmdRecipeCategory = new SqlCommand("sp_InsertProductTag"))
+                            recipe = new Recipe
                             {
-                                cmdRecipeCategory.CommandType = CommandType.StoredProcedure;
-                                cmdRecipeCategory.Parameters.AddWithValue("@RecipeId", recipeID);
-                                cmdRecipeCategory.Parameters.AddWithValue("@TagId", categoryID);
-                                cmdRecipeCategory.ExecuteNonQuery();
-                            }
+                                Id = Convert.ToInt32(reader["Id"]),
+                                RecipeName = Convert.ToString(reader["RecipeName"]),
+                                Description = Convert.ToString(reader["Description"]),
+                                Servings = Convert.ToInt32(reader["Servings"]),
+                                Image = Convert.ToString(reader["Image"]),
+                                Categories = Convert.ToString(reader["Categories"]),
+                                Ingredients = Convert.ToString(reader["Ingredients"]),
+                                Instructions = Convert.ToString(reader["Instructions"]),
+                                CreatedOn = Convert.ToDateTime(reader["CreatedOn"]),
+                                FolderName = Convert.ToString(reader["FolderName"])
+                            };
                         }
                     }
                 }
             }
-            return recipeID;
+            return recipe;
+        }
+
+        // Method to get all recipes
+        public List<Recipe> GetRecipes()
+        {
+            List<Recipe> recipeList = new List<Recipe>();
+            using (SqlConnection con = new SqlConnection(_connectionString))
+            {
+                using (SqlCommand cmd = new SqlCommand("sp_GetAllRecipes", con))
+                {
+                    cmd.CommandType = System.Data.CommandType.StoredProcedure;
+
+                    con.Open();
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            Recipe recipe = new Recipe
+                            {
+                                Id = Convert.ToInt32(reader["Id"]),
+                                RecipeName = Convert.ToString(reader["RecipeName"]),
+                                Description = Convert.ToString(reader["Description"]),
+                                Servings = Convert.ToInt32(reader["Servings"]),
+                                Image = Convert.ToString(reader["Image"]),
+                                Categories = Convert.ToString(reader["Categories"]),
+                                Ingredients = Convert.ToString(reader["Ingredients"]),
+                                Instructions = Convert.ToString(reader["Instructions"]),
+                                CreatedOn = Convert.ToDateTime(reader["CreatedOn"]),
+                                FolderName = Convert.ToString(reader["FolderName"])
+                            };
+                            recipeList.Add(recipe);
+                        }
+                    }
+                }
+            }
+            return recipeList;
+        }
+
+        // Method to update a recipe
+
+        public bool UpdateRecipe(Recipe recipe)
+        {
+            using (SqlConnection con = new SqlConnection(_connectionString))
+            {
+                using (SqlCommand cmd = new SqlCommand("sp_UpdateRecipe", con))
+                {
+                    cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@Id", recipe.Id);
+                    cmd.Parameters.AddWithValue("@RecipeName", recipe.RecipeName);
+                    cmd.Parameters.AddWithValue("@Description", recipe.Description);
+                    cmd.Parameters.AddWithValue("@Servings", recipe.Servings);
+                    cmd.Parameters.AddWithValue("@Image", recipe.Image);
+                    cmd.Parameters.AddWithValue("@Categories", recipe.Categories);
+                    cmd.Parameters.AddWithValue("@Ingredients", recipe.Ingredients);
+                    cmd.Parameters.AddWithValue("@Instructions", recipe.Instructions);
+                    cmd.Parameters.AddWithValue("@CreatedOn", recipe.CreatedOn);
+                    cmd.Parameters.AddWithValue("@FolderName", recipe.FolderName);
+
+                    con.Open();
+                    int i = cmd.ExecuteNonQuery();
+                    return i > 0;
+                }
+            }
+        }
+
+        // Method to delete a recioe
+        public bool DeleteRecipe(int id)
+        {
+            using (SqlConnection con = new SqlConnection(_connectionString))
+            {
+                using (SqlCommand cmd = new SqlCommand("sp_DeleteRecipe", con))
+                {
+                    cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@Id", id);
+
+                    con.Open();
+                    int i = cmd.ExecuteNonQuery();
+                    return i > 0;
+                }
+            }
         }
     }
 }
