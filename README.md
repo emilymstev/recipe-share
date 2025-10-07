@@ -1,7 +1,8 @@
 # recipe-share
-An in progress ASP.NET Core and React application for saving and sharing recipes!
+An in progress ASP.NET Core and React application for saving and sharing recipes! Personal development project to learn backend programming.
 
-Initial MVC setup and recipe/ingredient controllers are completed.
-Data access layer controller in progress.
+Initial MVC setup
+Bootstrap dummy template
+Displays vanilla version prior to database normalization
 
 For most recent progress, see the "develop" branch.
